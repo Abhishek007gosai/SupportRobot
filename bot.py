@@ -20,6 +20,9 @@ from server import start_web_server
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
+# httpx logs full request URLs, which contain the bot token
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 OWNER = filters.User(user_id=config.OWNER_ID)
@@ -102,7 +105,7 @@ async def delete_later(message, delay: int):
 # ---------------- user side ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    is_new = await db.add_user(user)
+    await db.add_user(user)
 
     template = await db.get_setting(KEY_START, DEFAULT_START)
     if template:
@@ -114,13 +117,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode=HTML,
             reply_markup=InlineKeyboardMarkup([[btn("⚙️ Settings", "menu")]]),
         )
-    elif is_new:
-        uname = f"@{user.username}" if user.username else "no username"
-        await context.bot.send_message(
-            config.OWNER_ID,
-            f"🆕 New user: {user.full_name} ({uname}) <code>{user.id}</code>",
-            parse_mode=HTML,
-        )
 
 
 async def user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -129,15 +125,12 @@ async def user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     await db.add_user(user)
 
-    uname = f"@{user.username}" if user.username else "no username"
-    header = await context.bot.send_message(
-        config.OWNER_ID,
-        f"📩 <b>{user.full_name}</b> ({uname})\nID: <code>{user.id}</code>",
-        parse_mode=HTML,
-    )
-    copied = await msg.copy(config.OWNER_ID)
-    await db.save_map(header.message_id, user.id)
-    await db.save_map(copied.message_id, user.id)
+    # forward to owner (shows "Forwarded from <name>"); owner replies by tagging it
+    try:
+        fwd = await msg.forward(config.OWNER_ID)
+    except TelegramError:
+        fwd = await msg.copy(config.OWNER_ID)
+    await db.save_map(fwd.message_id, user.id)
 
     template = await db.get_setting(KEY_REPLY, DEFAULT_REPLY)
     if not template:
@@ -322,7 +315,6 @@ async def owner_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         await msg.copy(user_id)
-        await msg.reply_text("✅ Sent.", quote=True)
     except Forbidden:
         await msg.reply_text("❌ This user has blocked the bot.")
     except TelegramError as e:
