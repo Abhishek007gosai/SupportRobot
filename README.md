@@ -6,6 +6,7 @@ Users message the bot -> you receive it. Users get an auto reply. Edit messages 
 1. Create a bot with @BotFather -> `BOT_TOKEN`
 2. Get your numeric id from @userinfobot -> `OWNER_ID`
 3. Create a free MongoDB Atlas cluster -> `MONGO_URI` (Network Access: allow 0.0.0.0/0)
+4. Optional: `API_ID` and `API_HASH` from my.telegram.org (not needed by the current code)
 
 Token, owner id and database are in `config.py` (read from environment variables, so set them on the host).
 Start message, reply message and the reply timer are edited inside the bot with /settings (owner only).
@@ -34,7 +35,8 @@ Free plan sleeps after 15 min without traffic: ping your Render URL every 5-10 m
 ## Deploy on Koyeb
 Create Service -> GitHub -> builder: Dockerfile (or buildpack with the Procfile).
 Service type: Web, exposed port `8000`, health check path `/`.
-Add env vars `BOT_TOKEN`, `OWNER_ID`, `MONGO_URI`, and `PORT=8000`.
+Add env vars `BOT_TOKEN`, `OWNER_ID`, `MONGO_URI`, and `PORT=8000` (see `.env.example`).
+If the container exits right away, check the logs: a `Missing environment variables` line lists what to add.
 
 Run only one instance at a time (Render and Koyeb together with the same token will conflict).
 

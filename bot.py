@@ -373,8 +373,9 @@ async def _run_broadcast(context, source, status):
 
 # ---------------- main ----------------
 def main():
-    if not config.BOT_TOKEN or not config.OWNER_ID or not config.MONGO_URI:
-        raise SystemExit("Set BOT_TOKEN, OWNER_ID and MONGO_URI (see config.py)")
+    missing = config.missing_required()
+    if missing:
+        raise SystemExit(f"Missing environment variables: {', '.join(missing)} (see .env.example)")
 
     start_web_server()
     app = Application.builder().token(config.BOT_TOKEN).build()
