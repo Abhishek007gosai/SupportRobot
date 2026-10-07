@@ -7,7 +7,8 @@ Users message the bot -> you receive it. Users get an auto reply. Edit messages 
 2. Get your numeric id from @userinfobot -> `OWNER_ID`
 3. Create a free MongoDB Atlas cluster -> `MONGO_URI` (Network Access: allow 0.0.0.0/0)
 
-All settings are in `config.py` (read from environment variables, so set them on the host).
+Token, owner id and database are in `config.py` (read from environment variables, so set them on the host).
+Start message, reply message and the reply timer are edited inside the bot with /settings (owner only).
 
 ## Owner panel (all inside Telegram)
 Send `/settings` (or tap the Settings button in your /start) :

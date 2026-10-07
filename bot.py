@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 import config
-import database as db
+from NEXUS import database as db
 from server import start_web_server
 
 logging.basicConfig(
@@ -30,10 +30,14 @@ KEY_REPLY = "REPLY_TO_USER"
 KEY_TIMER = "REPLY_DELETE_SECONDS"
 MAX_TIMER = 86400  # 24 hours
 
+# Built-in fallback texts, used only until the owner sets their own in /settings
+DEFAULT_START = "👋 Hello <b>{first_name}</b>!\n\nSend me your message and I will get back to you soon."
+DEFAULT_REPLY = "✅ Thanks! Your message has been received. I'll reply as soon as possible."
+
 # short name used in button data -> (db key, title, default text)
 MESSAGES = {
-    "start": (KEY_START, "Start message", config.START_MESSAGE),
-    "reply": (KEY_REPLY, "Reply message", config.REPLY_TO_USER),
+    "start": (KEY_START, "Start message", DEFAULT_START),
+    "reply": (KEY_REPLY, "Reply message", DEFAULT_REPLY),
 }
 
 OWNER_HELP = (
@@ -67,7 +71,7 @@ def fmt_seconds(sec: int) -> str:
 
 
 async def get_timer() -> int:
-    raw = await db.get_setting(KEY_TIMER, str(config.REPLY_DELETE_SECONDS))
+    raw = await db.get_setting(KEY_TIMER, "0")
     try:
         return max(0, int(raw))
     except ValueError:
@@ -100,7 +104,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     is_new = await db.add_user(user)
 
-    template = await db.get_setting(KEY_START, config.START_MESSAGE)
+    template = await db.get_setting(KEY_START, DEFAULT_START)
     if template:
         await update.message.reply_text(fill(template, user), parse_mode=HTML)
 
@@ -135,7 +139,7 @@ async def user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await db.save_map(header.message_id, user.id)
     await db.save_map(copied.message_id, user.id)
 
-    template = await db.get_setting(KEY_REPLY, config.REPLY_TO_USER)
+    template = await db.get_setting(KEY_REPLY, DEFAULT_REPLY)
     if not template:
         return
     sent = await msg.reply_text(fill(template, user), parse_mode=HTML)
@@ -172,7 +176,7 @@ async def show_main(update: Update):
 async def status_of(key: str) -> str:
     doc = await db.settings.find_one({"_id": key})
     if doc is None:
-        return "Default (from config.py)"
+        return "Default"
     if doc["value"] == "":
         return "Removed (nothing is sent)"
     return "Custom ✅"
